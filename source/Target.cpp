@@ -18,7 +18,9 @@
  */
 
 #include <cassert>
+#include <chrono>
 #include <iostream>
+#include <stdint.h>
 #include <unistd.h>
 
 #include <wiringPi.h>
@@ -112,33 +114,46 @@ void Target::airControl(void) const {
 
 void Target::sendAirCommandManchester(void) const {
     assert(parameters_->getAirCode() == Types::AirCode::MANCHESTER);
-
+    uint64_t rtime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    uint64_t ctime;
     for (auto i = 0U; i < parameters_->getAirCommand().length(); i++) {
         switch (parameters_->getAirCommand().at(i)) {
             case 's':
+                rtime += parameters_->getSyncLength();
                 digitalWrite(gpioPin_, LOW);
-                usleep(parameters_->getSyncLength());
+                ctime =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                usleep(rtime - ctime);
                 break;
 
             case 'S':
+                rtime += parameters_->getSyncLength();
                 digitalWrite(gpioPin_, HIGH);
-                usleep(parameters_->getSyncLength());
+                ctime =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                usleep(rtime - ctime);
                 break;
 
             case '0':
                 // Falling edge in the middle of the pulse
+                rtime += parameters_->getDataLength() / 2;
                 digitalWrite(gpioPin_, HIGH);
-                usleep(parameters_->getDataLength() / 2);
+                ctime =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                usleep(rtime - ctime);
+                rtime += parameters_->getDataLength() / 2;
                 digitalWrite(gpioPin_, LOW);
-                usleep(parameters_->getDataLength() / 2);
+                ctime =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                usleep(rtime - ctime);
                 break;
 
             case '1':
                 // Rising edge in the middle of the pulse
+                rtime += parameters_->getDataLength() / 2;
                 digitalWrite(gpioPin_, LOW);
-                usleep(parameters_->getDataLength() / 2);
+                ctime =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                usleep(rtime - ctime);
+                rtime += parameters_->getDataLength() / 2;
                 digitalWrite(gpioPin_, HIGH);
-                usleep(parameters_->getDataLength() / 2);
+                ctime =  std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                usleep(rtime - ctime);
                 break;
         }
     }

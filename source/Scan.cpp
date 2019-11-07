@@ -83,29 +83,33 @@ void Scan::airScan(void) {
 
     // Collect the data
     data_.clear();
+    Timer::start();
     while (data_.size() < static_cast<size_t>(SAMPLES)) {
-        data_.push_back(digitalRead(gpioPin_) > 0);
+        data_.push_back(Timer::timer(digitalRead(gpioPin_) > 0));
         usleep(parameters_->getSamplingRate());
     }
 }
 
 void Scan::printData(void) const {
     bool previousData = false;
+    uint64_t ptime = 0;
 
     for (auto i = 0U; i < data_.size(); i++) {
-        if (data_.at(i)) {
+        if (data_.at(i)->value()) {
             if (!previousData) {
-                std::cout << "+----+" << std::endl;
+                std::cout << "+----+     " << data_.at(i)->time() << " | " << data_.at(i)->time() - ptime << std::endl;
+                ptime = data_.at(i)->time();
             }
             std::cout << "     |" << std::endl;
         } else {
             if (previousData) {
-                std::cout << "+----+" << std::endl;
+                std::cout << "+----+     " << data_.at(i)->time() << " | " << data_.at(i)->time() - ptime << std::endl;
+                ptime = data_.at(i)->time();
             }
             std::cout << "|" << std::endl;
         }
 
-        previousData = data_.at(i);
+        previousData = data_.at(i)->value();
     }
 }
 
@@ -148,7 +152,7 @@ void Scan::serializeData(void) const {
 
     // Write sample data
     for (auto i = 0U; i < data_.size(); i++) {
-        const char data = static_cast<char>(data_.at(i));
+        const char data = static_cast<char>(data_.at(i)->value());
         if (!dumpFile.write(&data, sizeof(data))) {
             std::cerr << "Error: Unable to write data to dump file: "
                 << strerror(errno) << std::endl;
